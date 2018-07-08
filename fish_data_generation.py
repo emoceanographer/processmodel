@@ -118,19 +118,20 @@ if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
 
 	param_save = [0] # sets an initial 0
-	for i in range(0,10000):
+	for i in range(0,100000):
 		g_J_theta = np.random.beta(2,2)
 		PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
 		N_B_sim, N_J_sim, N_A_sim = simulate_population(N0, PARAMS_ABC, T_FINAL, LANDSCAPE_LEN) # simulates population with g_J value
-		sim_total_pop, sim_prop_ad = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
+		sim_total_pop, sim_prop_ad, sim_prop_p1 = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
 		pop_diff = (sim_total_pop - obs_total_pop) / obs_total_pop # percent difference in pop size; will fail at obs = 0
 		adult_prop_diff = (sim_prop_ad - obs_prop_ad) / obs_prop_ad 
+		pop_p1_diff = (sim_prop_p1 - obs_prop_p1) / obs_prop_p1
 
 		pop_check = all(pop_diff<0.001) # checks if all values of total population within 10% of observed
 		ap_check = all(adult_prop_diff<0.001) # checks if all values of adult proportion are within 10% of observed
-
+		p1_check = all(pop_p1_diff<0.001)
 		#print(pop_check, ap_check)
-		if all([pop_check, ap_check]): # if both summary stats are within bounds
+		if all([pop_check, ap_check, p1_check]): # if both summary stats are within bounds
 			param_save.append(g_J_theta) # saves the parameter value if it was within 10% of observed for all summary stats
 			#print(pop_check, ap_check)
 	#print(param_save)
