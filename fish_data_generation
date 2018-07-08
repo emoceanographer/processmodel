@@ -1,0 +1,8 @@
+# this script simulates stage-structured population sizes in space and time for given parameters and forcin
+# functions
+
+# import dependencies
+
+# define custom functions
+def growth_rate(temperatures, beta1, beta2)
+	

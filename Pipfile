@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+verify_ssl = true
+url = "https://pypi.org/simple"
+
+[dev-packages]
+
+[requires]
+python_version = "3.5"
+
+[packages]
+numpy = "*"
+scipy = "*"
+matplotlib = "*"
+pandas = "*"
+jupyter = "*"
+theano = "*"
+"pymc3" = {git = "https://github.com/pymc-devs/pymc3"}
+pandas-datareader = "*"
