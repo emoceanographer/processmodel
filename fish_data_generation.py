@@ -87,42 +87,53 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 	return N_B, N_J, N_A
 
 def calculate_summary_stats(N_B, N_J, N_A):
-	"Takes in a matrix of time x 1 population sizes for each stage and calculates summary statistics"
-	total_population = N_B + N_J + N_A
-	proportion_adult = N_A / total_population
+	"Takes in a matrix of time x place population sizes for each stage and calculates summary statistics"
+	total_adult = N_A.sum(axis=1) # total population in each stage, summed over space
+	total_juv = N_J.sum(axis=1) 
+	total_larv = N_B.sum(axis=1) 
 
-	return total_population, proportion_adult
+	total_population = total_adult + total_juv + total_larv # total population size in each time
+	proportion_adult = total_adult / total_population
+	proportion_p1 = (N_B[:,0] + N_J[:,0] + N_A[:,0]) / total_population # proportion of population in patch 1
+
+	return total_population, proportion_adult, proportion_p1
 
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": 1}
 T_FINAL = 2
-LANDSCAPE_LEN = 1
+LANDSCAPE_LEN = 2
 N0 = 5
 
 # Simulates population
 N_B, N_J, N_A = simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN)
-obs_total_pop, obs_prop_ad = calculate_summary_stats(N_B, N_J, N_A)
+#print(N_B)
+#print(N_J)
+#print(N_A)
+obs_total_pop, obs_prop_ad, obs_prop_p1 = calculate_summary_stats(N_B, N_J, N_A)
+#print(obs_total_pop, obs_prop_ad, obs_prop_p1)
 
+RUN_SIM = True
 # Pulls parameters from paramater priors
-PARAMS_ABC = PARAMS # copies parameters so new values can be generated
+if RUN_SIM:
+	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
 
-param_save = [0] # sets an initial 0
-for i in range(0,1000):
-	g_J_theta = np.random.beta(2,2)
-	PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
-	N_B_sim, N_J_sim, N_A_sim = simulate_population(N0, PARAMS_ABC, T_FINAL, LANDSCAPE_LEN) # simulates population with g_J value
-	sim_total_pop, sim_prop_ad = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
-	pop_diff = (sim_total_pop - obs_total_pop) / obs_total_pop # percent difference in pop size; will fail at obs = 0
-	adult_prop_diff = (sim_prop_ad - obs_prop_ad) / obs_prop_ad 
+	param_save = [0] # sets an initial 0
+	for i in range(0,10000):
+		g_J_theta = np.random.beta(2,2)
+		PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
+		N_B_sim, N_J_sim, N_A_sim = simulate_population(N0, PARAMS_ABC, T_FINAL, LANDSCAPE_LEN) # simulates population with g_J value
+		sim_total_pop, sim_prop_ad = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
+		pop_diff = (sim_total_pop - obs_total_pop) / obs_total_pop # percent difference in pop size; will fail at obs = 0
+		adult_prop_diff = (sim_prop_ad - obs_prop_ad) / obs_prop_ad 
 
-	pop_check = all(pop_diff<0.01) # checks if all values of total population within 10% of observed
-	ap_check = all(adult_prop_diff<0.01) # checks if all values of adult proportion are within 10% of observed
+		pop_check = all(pop_diff<0.001) # checks if all values of total population within 10% of observed
+		ap_check = all(adult_prop_diff<0.001) # checks if all values of adult proportion are within 10% of observed
 
-	#print(pop_check, ap_check)
-	if all([pop_check, ap_check]): # if both summary stats are within bounds
-		param_save.append(g_J_theta) # saves the parameter value if it was within 10% of observed for all summary stats
 		#print(pop_check, ap_check)
-#print(param_save)
-# Makes a model to fit the data
+		if all([pop_check, ap_check]): # if both summary stats are within bounds
+			param_save.append(g_J_theta) # saves the parameter value if it was within 10% of observed for all summary stats
+			#print(pop_check, ap_check)
+	#print(param_save)
+	# Makes a model to fit the data
 
-print(np.histogram(param_save,10))
+	print(np.histogram(param_save,10))
