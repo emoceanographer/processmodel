@@ -128,9 +128,9 @@ def calculate_summary_stats(N_B, N_J, N_A):
 
 	total_population = total_adult + total_juv + total_larv # total population size in each time
 	proportion_adult = total_adult / total_population
-	proportion_p1 = (N_B[:,0] + N_J[:,0] + N_A[:,0]) / total_population # proportion of population in patch 1
+	proportion_p_i = (N_B + N_J + N_A) / total_population # proportion of population in patch 1
 
-	return total_population, proportion_adult, proportion_p1
+	return total_population, proportion_adult, proportion_p_i
 
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": .9, "delta_t":.1, "lam":1}
@@ -141,19 +141,19 @@ N0 = 5
 
 # Simulates population
 N_B, N_J, N_A = simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN)
-print(N_B)
-print(N_J)
-print(N_A)
-obs_total_pop, obs_prop_ad, obs_prop_p1 = calculate_summary_stats(N_B, N_J, N_A)
-#print(obs_total_pop, obs_prop_ad, obs_prop_p1)
+#(N_B)
+#print(N_J)
+#print(N_A)
+obs_total_pop, obs_prop_ad, obs_prop_p_i = calculate_summary_stats(N_B, N_J, N_A)
+#print(obs_total_pop, obs_prop_ad, obs_prop_p_i)
 
-RUN_SIM = False
+RUN_SIM = True
 # Pulls parameters from paramater priors
 if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
 
-	param_save = [[0,0]] # sets an initial 0
-	for i in range(0,10000):
+	param_save = [[]] # sets an initial 0
+	for i in range(0,100000):
 		g_J_theta = np.random.beta(2,2)
 		alpha0_theta = np.random.lognormal(1,1)
 
@@ -161,19 +161,25 @@ if RUN_SIM:
 		PARAMS_ABC["alpha0"] = alpha0_theta
 
 		N_B_sim, N_J_sim, N_A_sim = simulate_population(N0, PARAMS_ABC, T_FINAL, LANDSCAPE_LEN) # simulates population with g_J value
-		sim_total_pop, sim_prop_ad, sim_prop_p1 = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
-		pop_diff = (sim_total_pop - obs_total_pop) / obs_total_pop # percent difference in pop size; will fail at obs = 0
-		adult_prop_diff = (sim_prop_ad - obs_prop_ad) / obs_prop_ad 
-		pop_p1_diff = (sim_prop_p1 - obs_prop_p1) / obs_prop_p1
+		sim_total_pop, sim_prop_ad, sim_prop_p_i = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
+		pop_diff = abs((sim_total_pop - obs_total_pop) / obs_total_pop) # percent difference in pop size; will fail at obs = 0
+		adult_prop_diff = abs((sim_prop_ad - obs_prop_ad)) 
+		pop_p1_diff = abs((sim_prop_p_i - obs_prop_p_i))
 
-		pop_check = all(pop_diff<0.01) # checks if all values of total population within 10% of observed
-		ap_check = all(adult_prop_diff<0.01) # checks if all values of adult proportion are within 10% of observed
-		p1_check = all(pop_p1_diff<0.01)
-		#print(pop_check, ap_check)
+		#print(sim_prop_p_i)
+		#print(N_B_sim, N_J_sim, N_A_sim)
+		pop_check = all(pop_diff<0.2) # checks if all values of total population within % of observed
+		ap_check = all(adult_prop_diff<0.1) # checks if all values of adult proportion are within % of observed
+		p1_check = np.all(pop_p1_diff<0.5) # np.all needed to resolve an ambiguous all call on an array
+
+		#print(p1_check)
+
 		if all([pop_check, ap_check, p1_check]): # if both summary stats are within bounds
 			param_save.append([g_J_theta, alpha0_theta]) # saves the parameter value if it was within 10% of observed for all summary stats
 			#print(pop_check, ap_check)
 	#print(param_save)
 	# Makes a model to fit the data
-	print(param_save)
+	print(param_save[0][0])
+	print("g_J, alpha0 mean:", np.mean(param_save, axis=0), "g_J, alph0 stdev:", np.std(param_save, axis=0))
+	#print("alpha0 mean:", np.mean(param_save[:,1]), "alph0 stdev:", np.std(param_save[:,1]))
 #	print(np.histogram(param_save,10))
