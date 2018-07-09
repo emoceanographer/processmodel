@@ -59,6 +59,8 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 	for x in range(0,LANDSCAPE_LEN):
 		LANDSCAPE.append(x)
 
+	kernel = dispersal_kernel(LANDSCAPE, PARAMS["lam"])
+	kernel = np.array(kernel) # having this as an array makes calls later (columsn alone) much easier
 	# Generate a landscape of temperatures over time
 	temperatures = []
 	for t in range(0,T_FINAL):
@@ -86,7 +88,19 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 			N_J[t+1][i] = (np.random.poisson(nextNJ))
 			N_A[t+1][i] = (np.random.poisson(nextNA))
 			#print(N_B[t+1][i], N_J[t+1][i], N_A[t+1][i])
-		N_A[t+1][i], N_A[t+1][i] = deterministic_movement(N_A[t+1][i], N_A[t+1][i], PARAMS) # does not generalize 
+			#print(type(N_A), type(kernel))
+		N_Am = np.ones(LANDSCAPE_LEN) - 1
+		#print(N_Am)
+		for i in range(0, LANDSCAPE_LEN): # runs through each element again for dispersal
+			#print(N_A[t+1,:])
+			#print(kernel[:,i])
+			#print(N_A[t+1,:]*kernel[:,i])
+			incoming_fish = (1-PARAMS["f_s"])*N_A[t+1,:]*kernel[:,i] # contribution of all other patches to patch i
+			N_Am[i] = N_A[t+1][i]*PARAMS["f_s"] +  incoming_fish.sum() # add "fraction stay" plus the fraction leaving
+			#from other patches
+
+		N_A[t+1,:] = N_Am
+	
 
 	return N_B, N_J, N_A
 
@@ -119,19 +133,17 @@ def calculate_summary_stats(N_B, N_J, N_A):
 	return total_population, proportion_adult, proportion_p1
 
 # Sets parameters
-PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": 1, "delta_t":.1}
+PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": .9, "delta_t":.1, "lam":1}
 T_FINAL = 4
 LANDSCAPE_LEN = 5
 N0 = 5
 
 
-print(dispersal_kernel([1,2,3,4,5], 1))
-
 # Simulates population
 N_B, N_J, N_A = simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN)
-#print(N_B)
-#print(N_J)
-#print(N_A)
+print(N_B)
+print(N_J)
+print(N_A)
 obs_total_pop, obs_prop_ad, obs_prop_p1 = calculate_summary_stats(N_B, N_J, N_A)
 #print(obs_total_pop, obs_prop_ad, obs_prop_p1)
 
