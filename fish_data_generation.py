@@ -152,8 +152,8 @@ RUN_SIM = True
 if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
 
-	param_save = [[]] # sets an initial 0
-	for i in range(0,100000):
+	param_save = [] # sets an initial 0; fixed to [] because [[]] made the mean go poorly (averaging in an [] at start?)
+	for i in range(0,10000):
 		g_J_theta = np.random.beta(2,2)
 		alpha0_theta = np.random.lognormal(1,1)
 
@@ -168,9 +168,9 @@ if RUN_SIM:
 
 		#print(sim_prop_p_i)
 		#print(N_B_sim, N_J_sim, N_A_sim)
-		pop_check = all(pop_diff<0.2) # checks if all values of total population within % of observed
+		pop_check = all(pop_diff<0.3) # checks if all values of total population within % of observed
 		ap_check = all(adult_prop_diff<0.1) # checks if all values of adult proportion are within % of observed
-		p1_check = np.all(pop_p1_diff<0.5) # np.all needed to resolve an ambiguous all call on an array
+		p1_check = np.all(pop_p1_diff<0.4) # np.all needed to resolve an ambiguous all call on an array
 
 		#print(p1_check)
 
@@ -179,7 +179,11 @@ if RUN_SIM:
 			#print(pop_check, ap_check)
 	#print(param_save)
 	# Makes a model to fit the data
-	print(param_save[0][0])
-	print("g_J, alpha0 mean:", np.mean(param_save, axis=0), "g_J, alph0 stdev:", np.std(param_save, axis=0))
+	param_save = np.array(param_save) # added this because without it, I get an error by taking the mean (array function)
+	#print(type(param_save))
+	mean_params = np.mean(param_save, axis=0)
+	std_params = np.std(param_save, axis = 0)
+	print("Mean of parameters:", mean_params)
+	print("StDev of parameters:", std_params)
 	#print("alpha0 mean:", np.mean(param_save[:,1]), "alph0 stdev:", np.std(param_save[:,1]))
 #	print(np.histogram(param_save,10))
