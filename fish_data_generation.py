@@ -6,6 +6,7 @@
 # import dependencies
 import numpy as np
 import random as random
+import math as math
 
 # define custom functions
 def growth_rate(temperature, T0, alpha0, width):
@@ -64,7 +65,7 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 		landscape_at_t = set_landscape_temps(LANDSCAPE, 1, 0+PARAMS["delta_t"]*t)
 		temperatures.append(landscape_at_t)
 
-	print(temperatures)
+	#print(temperatures)
 	# Set starting numbers for population and allocate space for population sizes
 	N_B = np.ndarray(shape=(T_FINAL+1, LANDSCAPE_LEN), dtype=float, order='F')
 	N_B[0] = N0
@@ -89,8 +90,24 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 
 	return N_B, N_J, N_A
 
+
+def dispersal_kernel(LANDSCAPE, lambda_val):
+	""" Takes in a 1-D landscape vector of length n and a lambda parameter for an expoential distribution
+	and returns an nxn matrix where each row is that element's dispersal kernel to the rest of the landscape"""
+	kernel = []
+	for i in range(0, len(LANDSCAPE)):
+		LANDSCAPE = np.array(LANDSCAPE)
+		dist = np.abs((LANDSCAPE[i] - LANDSCAPE))
+		#print(LANDSCAPE[i], dist)
+		exp_element = lambda_val*np.exp(-lambda_val*dist)
+		exp_proportion = exp_element / exp_element.sum()
+	
+		kernel.append(list(exp_proportion))
+	return kernel
+
+
 def calculate_summary_stats(N_B, N_J, N_A):
-	"Takes in a matrix of time x place population sizes for each stage and calculates summary statistics"
+	"""Takes in a matrix of time x place population sizes for each stage and calculates summary statistics"""
 	total_adult = N_A.sum(axis=1) # total population in each stage, summed over space
 	total_juv = N_J.sum(axis=1) 
 	total_larv = N_B.sum(axis=1) 
@@ -106,6 +123,9 @@ PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m
 T_FINAL = 4
 LANDSCAPE_LEN = 5
 N0 = 5
+
+
+print(dispersal_kernel([1,2,3,4,5], 1))
 
 # Simulates population
 N_B, N_J, N_A = simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN)
