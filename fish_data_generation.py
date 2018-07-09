@@ -58,10 +58,13 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 	for x in range(0,LANDSCAPE_LEN):
 		LANDSCAPE.append(x)
 
-	# Generate a landscape of temperatures
-	temperatures = set_landscape_temps(LANDSCAPE, 1, 0)
+	# Generate a landscape of temperatures over time
+	temperatures = []
+	for t in range(0,T_FINAL):
+		landscape_at_t = set_landscape_temps(LANDSCAPE, 1, 0+PARAMS["delta_t"]*t)
+		temperatures.append(landscape_at_t)
 
-
+	print(temperatures)
 	# Set starting numbers for population and allocate space for population sizes
 	N_B = np.ndarray(shape=(T_FINAL+1, LANDSCAPE_LEN), dtype=float, order='F')
 	N_B[0] = N0
@@ -74,7 +77,7 @@ def simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN):
 	# Simulation population forward through time with Poisson 
 	for t in range(0, T_FINAL):
 		for i in range(0, LANDSCAPE_LEN):
-			PARAMS["alpha"] = growth_rate(temperatures[i], PARAMS["T0"], PARAMS["alpha0"], PARAMS["width"])
+			PARAMS["alpha"] = growth_rate(temperatures[t][i], PARAMS["T0"], PARAMS["alpha0"], PARAMS["width"])
 			#print(PARAMS["alpha"])
 			nextNB, nextNJ, nextNA = deterministic_pop_dynamics(N_B[t][i], N_J[t][i], N_A[t][i], PARAMS)
 			#print(nextNB, nextNJ, nextNA)
@@ -99,9 +102,9 @@ def calculate_summary_stats(N_B, N_J, N_A):
 	return total_population, proportion_adult, proportion_p1
 
 # Sets parameters
-PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": 1}
+PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": 1, "delta_t":.1}
 T_FINAL = 4
-LANDSCAPE_LEN = 2
+LANDSCAPE_LEN = 5
 N0 = 5
 
 # Simulates population
@@ -112,7 +115,7 @@ N_B, N_J, N_A = simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN)
 obs_total_pop, obs_prop_ad, obs_prop_p1 = calculate_summary_stats(N_B, N_J, N_A)
 #print(obs_total_pop, obs_prop_ad, obs_prop_p1)
 
-RUN_SIM = True
+RUN_SIM = False
 # Pulls parameters from paramater priors
 if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
@@ -140,5 +143,5 @@ if RUN_SIM:
 			#print(pop_check, ap_check)
 	#print(param_save)
 	# Makes a model to fit the data
-print(param_save)
+	print(param_save)
 #	print(np.histogram(param_save,10))
