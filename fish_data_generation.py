@@ -100,7 +100,7 @@ def calculate_summary_stats(N_B, N_J, N_A):
 
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": 1}
-T_FINAL = 2
+T_FINAL = 4
 LANDSCAPE_LEN = 2
 N0 = 5
 
@@ -117,24 +117,28 @@ RUN_SIM = True
 if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
 
-	param_save = [0] # sets an initial 0
-	for i in range(0,100000):
+	param_save = [[0,0]] # sets an initial 0
+	for i in range(0,10000):
 		g_J_theta = np.random.beta(2,2)
+		alpha0_theta = np.random.lognormal(1,1)
+
 		PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
+		PARAMS_ABC["alpha0"] = alpha0_theta
+
 		N_B_sim, N_J_sim, N_A_sim = simulate_population(N0, PARAMS_ABC, T_FINAL, LANDSCAPE_LEN) # simulates population with g_J value
 		sim_total_pop, sim_prop_ad, sim_prop_p1 = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
 		pop_diff = (sim_total_pop - obs_total_pop) / obs_total_pop # percent difference in pop size; will fail at obs = 0
 		adult_prop_diff = (sim_prop_ad - obs_prop_ad) / obs_prop_ad 
 		pop_p1_diff = (sim_prop_p1 - obs_prop_p1) / obs_prop_p1
 
-		pop_check = all(pop_diff<0.001) # checks if all values of total population within 10% of observed
-		ap_check = all(adult_prop_diff<0.001) # checks if all values of adult proportion are within 10% of observed
-		p1_check = all(pop_p1_diff<0.001)
+		pop_check = all(pop_diff<0.01) # checks if all values of total population within 10% of observed
+		ap_check = all(adult_prop_diff<0.01) # checks if all values of adult proportion are within 10% of observed
+		p1_check = all(pop_p1_diff<0.01)
 		#print(pop_check, ap_check)
 		if all([pop_check, ap_check, p1_check]): # if both summary stats are within bounds
-			param_save.append(g_J_theta) # saves the parameter value if it was within 10% of observed for all summary stats
+			param_save.append([g_J_theta, alpha0_theta]) # saves the parameter value if it was within 10% of observed for all summary stats
 			#print(pop_check, ap_check)
 	#print(param_save)
 	# Makes a model to fit the data
-
-	print(np.histogram(param_save,10))
+print(param_save)
+#	print(np.histogram(param_save,10))
