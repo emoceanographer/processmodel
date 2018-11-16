@@ -7,6 +7,8 @@
 import numpy as np
 import random as random
 import math as math
+import copy as copy
+import itertools
 
 def beta_defs(alpha,mu):
 	""" Takes in an alpha shape parameter and the desired mean and returns a value from the beta
@@ -135,50 +137,49 @@ obs_total_pop, obs_prop_ad, obs_prop_p_i= calculate_summary_stats(N_B, N_J, N_A)
 RUN_SIM = True
 # Pulls parameters from paramater priors
 if RUN_SIM:
-	PARAMS_ABC = PARAMS # copies parameters so new values can be generated; FIX ME! this is a redirect, not a copy?
+    PARAMS_ABC = copy.deepcopy(PARAMS) # copies parameters so new values can be generated; FIX ME! this is a redirect, not a copy?
 
-	param_save = [] # sets an initial 0; fixed to [] because [[]] made the mean go poorly (averaging in an [] at start?)
-	dists = []
-	for i in range(0,NUMBER_SIMS):
-		g_B_theta = np.random.beta(2,2)
-		g_J_theta = np.random.beta(2,2)
-		alpha0_theta = np.random.lognormal(1,1)
-		width_theta = np.random.lognormal(1,1)
-		f_s_theta = np.random.uniform()
-		T0_theta = np.random.normal(0,0.5)
-		m_J_theta = np.random.beta(2,2)
-		m_A_theta = np.random.beta(2,2)
-		
+    param_save = [] # sets an initial 0; fixed to [] because [[]] made the mean go poorly (averaging in an [] at start?)
+    dists = []
+    for i in range(0,NUMBER_SIMS):
+        g_B_theta = np.random.beta(2,2)
+        g_J_theta = np.random.beta(2,2)
+        alpha0_theta = np.random.lognormal(1,1)
+        width_theta = np.random.lognormal(1,1)
+        f_s_theta = np.random.uniform()
+        T0_theta = np.random.normal(0,0.5)
+        m_J_theta = np.random.beta(2,2)
+        m_A_theta = np.random.beta(2,2)
 
-		PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
-		PARAMS_ABC["alpha0"] = alpha0_theta
-		PARAMS_ABC["width"] = width_theta
-		PARAMS_ABC["f_s"] = f_s_theta
-		PARAMS_ABC["g_G"] = g_B_theta
-		PARAMS_ABC["T0"] = T0_theta
-		PARAMS_ABC["m_J"] = m_J_theta
-		PARAMS_ABC["m_A"] = m_A_theta
+        PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
+        PARAMS_ABC["alpha0"] = alpha0_theta
+        PARAMS_ABC["width"] = width_theta
+        PARAMS_ABC["f_s"] = f_s_theta
+        PARAMS_ABC["g_G"] = g_B_theta
+        PARAMS_ABC["T0"] = T0_theta
+        PARAMS_ABC["m_J"] = m_J_theta
+        PARAMS_ABC["m_A"] = m_A_theta
 
-		N_B_sim, N_J_sim, N_A_sim = simulation_population(N0,N0,N0, PARAMS_ABC, T_FINAL, temperatures) # simulates population with g_J value
-		sim_total_pop, sim_prop_ad, sim_prop_p_i = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
+        N_B_sim, N_J_sim, N_A_sim = simulation_population(N0,N0,N0, PARAMS_ABC, T_FINAL, temperatures) # simulates population with g_J value
+        #sim_total_pop, sim_prop_ad, sim_prop_p_i = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
+        
+        #vec1 = sim_total_pop + sim_prop_ad + sim_prop_p_i
+        #vec2 = obs_total_pop + obs_prop_ad + obs_prop_p_i
+        a = list(itertools.chain.from_iterable(N_B_sim)) # I had added these in lieu of the summary stats as the 'real'
+        #data that we are trying to replicate mostly closely
+        b = list(itertools.chain.from_iterable(N_J_sim))
+        c = list(itertools.chain.from_iterable(N_A_sim))
+        d = list(itertools.chain.from_iterable(N_B))
+        e = list(itertools.chain.from_iterable(N_J))
+        f = list(itertools.chain.from_iterable(N_A))
+        vec1 = a + b + c
+        vec2 = d + e + f
 
-		vec1 = sim_total_pop + sim_prop_ad + sim_prop_p_i
-		vec2 = obs_total_pop + obs_prop_ad + obs_prop_p_i
+        param_save.append([g_J_theta, g_B_theta, alpha0_theta, width_theta, f_s_theta, T0_theta, m_J_theta, m_A_theta])
+        dists.append(euclidean_distance(vec1,vec2))
 
-		param_save.append([g_J_theta, g_B_theta, alpha0_theta, width_theta, f_s_theta, T0_theta, m_J_theta, m_A_theta]) 
-		dists.append(euclidean_distance(vec1,vec2))
-	
-	library_index = small_percent(dists,10)
-	library = []
-	for i in range(0,len(library_index)):
-		library.append(param_save[library_index[i]])
-	print(library)
-
-	
-	param_save = np.array(param_save) # added this because without it, I get an error by taking the mean (array function)
-	
-	print("Total number of acceptable parameter runs", len(param_save), "out of", NUMBER_SIMS)
-	mean_params = np.mean(param_save, axis=0)
-	std_params = np.std(param_save, axis = 0)
-	print("Mean of parameters:", mean_params)
-	print("StDev of parameters:", std_params)
+    library_index = small_percent(dists,5)
+    library = []
+    for i in range(0,len(library_index)):
+        library.append(param_save[library_index[i]])
+    #print(library)
