@@ -101,12 +101,24 @@ def euclidean_distance(vec1, vec2):
 	return distance
 
 
+def top_percent(vector, percent):
+	""" Takes a vector and returns the indexes of the elements within the top (percent) percent of the vector"""
+	sorted_vector = sorted(vector)
+	cutoff = math.floor(len(vector)*percent/100) # finds the value which (percent) percent are below
+	indexes = []
+	print(cutoff)
+	for i in range(0,len(vector)):
+		if vector[i] <= sorted_vector[cutoff]: # looks for values below the found cutoff
+			indexes.append(i)
+
+	return indexes
+
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": .9, "delta_t":.1, "lam":1}
 T_FINAL = 10
 LANDSCAPE_LEN = 2
 N0 = 5
-NUMBER_SIMS = 1000000
+NUMBER_SIMS = 1
 
 print("True parameter values:", PARAMS["g_J"], PARAMS["g_B"],PARAMS["alpha0"], PARAMS["width"], PARAMS["f_s"], PARAMS["T0"], PARAMS["m_J"], PARAMS["m_A"])
 
@@ -119,6 +131,9 @@ N_B, N_J, N_A = simulation_population(5,5,5,PARAMS,T_FINAL, temperatures)
 
 obs_total_pop, obs_prop_ad, obs_prop_p_i= calculate_summary_stats(N_B, N_J, N_A)
 
+a = [2,2,2,2,2,1,1,1,1,1,3,3,3,3,3,4,4,4,4,4]
+b = top_percent(a,10)
+print(b)
 
 RUN_SIM = False
 # Pulls parameters from paramater priors
@@ -126,6 +141,7 @@ if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated; FIX ME! this is a redirect, not a copy?
 
 	param_save = [] # sets an initial 0; fixed to [] because [[]] made the mean go poorly (averaging in an [] at start?)
+	dists = []
 	for i in range(0,NUMBER_SIMS):
 		g_B_theta = np.random.beta(2,2)
 		g_J_theta = np.random.beta(2,2)
@@ -148,21 +164,15 @@ if RUN_SIM:
 
 		N_B_sim, N_J_sim, N_A_sim = simulation_population(N0,N0,N0, PARAMS_ABC, T_FINAL, temperatures) # simulates population with g_J value
 		sim_total_pop, sim_prop_ad, sim_prop_p_i = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
-		#pop_diff = abs((sim_total_pop - obs_total_pop) / obs_total_pop) # percent difference in pop size; will fail at obs = 0
-		#adult_prop_diff = abs((sim_prop_ad - obs_prop_ad)) 
-		#pop_p1_diff = abs((sim_prop_p_i - obs_prop_p_i))
 
+		vec1 = sim_total_pop + sim_prop_ad + sim_prop_p_i
+		vec2 = obs_total_pop + obs_prop_ad + obs_prop_p_i
 
-		pop_check = all(pop_diff<0.3) # checks if all values of total population within % of observed
-		ap_check = all(adult_prop_diff<0.1) # checks if all values of adult proportion are within % of observed
-		p1_check = np.all(pop_p1_diff<0.4) # np.all needed to resolve an ambiguous all call on an array
+		param_save.append([g_J_theta, g_B_theta, alpha0_theta, width_theta, f_s_theta, T0_theta, m_J_theta, m_A_theta]) 
+		dists.append(euclidean_distance(vec1,vec2))
+	
 
-		
-
-		if all([pop_check, ap_check, p1_check]): # if both summary stats are within bounds
-			param_save.append([g_J_theta, g_B_theta, alpha0_theta, width_theta, f_s_theta, T0_theta, m_J_theta, m_A_theta]) # saves the parameter value if it was within 10% of observed for all summary stats
-			#print(param_save)
-	# Makes a model to fit the data
+	
 	param_save = np.array(param_save) # added this because without it, I get an error by taking the mean (array function)
 	
 	print("Total number of acceptable parameter runs", len(param_save), "out of", NUMBER_SIMS)
