@@ -101,8 +101,8 @@ def euclidean_distance(vec1, vec2):
 	return distance
 
 
-def top_percent(vector, percent):
-	""" Takes a vector and returns the indexes of the elements within the top (percent) percent of the vector"""
+def small_percent(vector, percent):
+	""" Takes a vector and returns the indexes of the elements within the smallest (percent) percent of the vector"""
 	sorted_vector = sorted(vector)
 	cutoff = math.floor(len(vector)*percent/100) # finds the value which (percent) percent are below
 	indexes = []
@@ -113,12 +113,13 @@ def top_percent(vector, percent):
 
 	return indexes
 
+
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": .9, "delta_t":.1, "lam":1}
 T_FINAL = 10
 LANDSCAPE_LEN = 2
 N0 = 5
-NUMBER_SIMS = 1
+NUMBER_SIMS = 100
 
 print("True parameter values:", PARAMS["g_J"], PARAMS["g_B"],PARAMS["alpha0"], PARAMS["width"], PARAMS["f_s"], PARAMS["T0"], PARAMS["m_J"], PARAMS["m_A"])
 
@@ -131,11 +132,7 @@ N_B, N_J, N_A = simulation_population(5,5,5,PARAMS,T_FINAL, temperatures)
 
 obs_total_pop, obs_prop_ad, obs_prop_p_i= calculate_summary_stats(N_B, N_J, N_A)
 
-a = [2,2,2,2,2,1,1,1,1,1,3,3,3,3,3,4,4,4,4,4]
-b = top_percent(a,10)
-print(b)
-
-RUN_SIM = False
+RUN_SIM = True
 # Pulls parameters from paramater priors
 if RUN_SIM:
 	PARAMS_ABC = PARAMS # copies parameters so new values can be generated; FIX ME! this is a redirect, not a copy?
@@ -171,6 +168,11 @@ if RUN_SIM:
 		param_save.append([g_J_theta, g_B_theta, alpha0_theta, width_theta, f_s_theta, T0_theta, m_J_theta, m_A_theta]) 
 		dists.append(euclidean_distance(vec1,vec2))
 	
+	library_index = small_percent(dists,10)
+	library = []
+	for i in range(0,len(library_index)):
+		library.append(param_save[library_index[i]])
+	print(library)
 
 	
 	param_save = np.array(param_save) # added this because without it, I get an error by taking the mean (array function)
