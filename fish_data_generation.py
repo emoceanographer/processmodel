@@ -8,13 +8,15 @@ import numpy as np
 import random as random
 import math as math
 
-# define custom functions
-def growth_rate(temperature, T0, alpha0, width):
-	""" Takes in a temperature as well as the location of the parabolic vertex (T0, alpha0) and width of
-	the parabola and returns the associated growth rates 
+import growth_rate as growth_rate
+
+
+def temp_dependence(temperature, T0, theta_0, width):
+	""" Takes in a temperature and the location of the parabolic vertex (T0, theta_0) and the width of
+	the parabola and returns the associated temperature dependent rate (theta)
 	"""
-	alpha = -width*(temperature-T0)*(temperature-T0) + alpha0
-	return alpha	
+	theta = -width*(temperature-T0)*(temperature-T0) + theta_0
+	return theta
 
 
 def deterministic_pop_dynamics(N_B, N_J, N_A, params):
@@ -128,37 +130,47 @@ def calculate_summary_stats(N_B, N_J, N_A):
 
 	total_population = total_adult + total_juv + total_larv # total population size in each time
 	proportion_adult = total_adult / total_population
-	proportion_p_i = (N_B + N_J + N_A) / total_population # proportion of population in patch 1
+	proportion_p_i = []
 
+	for i in range(0, len(N_B)):
+		proportion_p_i.append((N_B[i,0]+N_J[i,0]+N_A[i,0])/total_population[i])
+
+	proportion_p_i = np.asarray(proportion_p_i)
 	return total_population, proportion_adult, proportion_p_i
 
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": .9, "delta_t":.1, "lam":1}
-T_FINAL = 4
-LANDSCAPE_LEN = 5
+T_FINAL = 10
+LANDSCAPE_LEN = 2
 N0 = 5
+NUMBER_SIMS = 100000
 
+print("True parameter values:", PARAMS["g_J"], PARAMS["alpha0"], PARAMS["width"], PARAMS["f_s"], PARAMS["lam"])
 
 # Simulates population
 N_B, N_J, N_A = simulate_population(N0, PARAMS, T_FINAL, LANDSCAPE_LEN)
-#(N_B)
-#print(N_J)
-#print(N_A)
+
 obs_total_pop, obs_prop_ad, obs_prop_p_i = calculate_summary_stats(N_B, N_J, N_A)
-#print(obs_total_pop, obs_prop_ad, obs_prop_p_i)
+
 
 RUN_SIM = True
 # Pulls parameters from paramater priors
 if RUN_SIM:
-	PARAMS_ABC = PARAMS # copies parameters so new values can be generated
+	PARAMS_ABC = PARAMS # copies parameters so new values can be generated; FIX ME! this is a redirect, not a copy?
 
 	param_save = [] # sets an initial 0; fixed to [] because [[]] made the mean go poorly (averaging in an [] at start?)
-	for i in range(0,10000):
+	for i in range(0,NUMBER_SIMS):
 		g_J_theta = np.random.beta(2,2)
 		alpha0_theta = np.random.lognormal(1,1)
+		width_theta = np.random.lognormal(1,1)
+		f_s_theta = np.random.uniform()
+		lam_theta = np.random.lognormal(1,1)
 
 		PARAMS_ABC["g_J"] = g_J_theta # sets the g_J parameter to our random guess
 		PARAMS_ABC["alpha0"] = alpha0_theta
+		PARAMS_ABC["width"] = width_theta
+		PARAMS_ABC["f_s"] = f_s_theta
+		PARAMS_ABC["lam"] = lam_theta
 
 		N_B_sim, N_J_sim, N_A_sim = simulate_population(N0, PARAMS_ABC, T_FINAL, LANDSCAPE_LEN) # simulates population with g_J value
 		sim_total_pop, sim_prop_ad, sim_prop_p_i = calculate_summary_stats(N_B_sim, N_J_sim, N_A_sim)
@@ -166,24 +178,23 @@ if RUN_SIM:
 		adult_prop_diff = abs((sim_prop_ad - obs_prop_ad)) 
 		pop_p1_diff = abs((sim_prop_p_i - obs_prop_p_i))
 
-		#print(sim_prop_p_i)
-		#print(N_B_sim, N_J_sim, N_A_sim)
+
 		pop_check = all(pop_diff<0.3) # checks if all values of total population within % of observed
 		ap_check = all(adult_prop_diff<0.1) # checks if all values of adult proportion are within % of observed
 		p1_check = np.all(pop_p1_diff<0.4) # np.all needed to resolve an ambiguous all call on an array
 
-		#print(p1_check)
+
 
 		if all([pop_check, ap_check, p1_check]): # if both summary stats are within bounds
-			param_save.append([g_J_theta, alpha0_theta]) # saves the parameter value if it was within 10% of observed for all summary stats
-			#print(pop_check, ap_check)
-	#print(param_save)
+			param_save.append([g_J_theta, alpha0_theta, width_theta, f_s_theta, lam_theta]) # saves the parameter value if it was within 10% of observed for all summary stats
+
 	# Makes a model to fit the data
 	param_save = np.array(param_save) # added this because without it, I get an error by taking the mean (array function)
-	#print(type(param_save))
+	
+	print("Total number of acceptable parameter runs", len(param_save), "out of", NUMBER_SIMS)
 	mean_params = np.mean(param_save, axis=0)
 	std_params = np.std(param_save, axis = 0)
 	print("Mean of parameters:", mean_params)
 	print("StDev of parameters:", std_params)
-	#print("alpha0 mean:", np.mean(param_save[:,1]), "alph0 stdev:", np.std(param_save[:,1]))
-#	print(np.histogram(param_save,10))
+
+
