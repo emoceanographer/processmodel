@@ -116,12 +116,23 @@ def small_percent(vector, percent):
 	return indexes
 
 
+def z_score(x):
+	"""Takes a list and returns a 0 centered, std = 1 scaled version of the list"""
+	st_dev = np.std(x,axis=0)
+	mu = np.mean(x,axis=0)
+	rescaled_values = []
+	for element in rang(0,len(x)):
+		rescaled_values[element] = (x[element] - mu) / st_dev
+
+	return rescaled_values
+
+
 # Sets parameters
 PARAMS = {"alpha0": 2, "T0": 0, "width": 1, "g_B": .3, "g_J": .4, "m_J": .05, "m_A": .05, "f_s": .9, "delta_t":.1, "lam":1}
 T_FINAL = 10
 LANDSCAPE_LEN = 2
 N0 = 5
-NUMBER_SIMS = 100
+NUMBER_SIMS = 10
 
 print("True parameter values:", PARAMS["g_J"], PARAMS["g_B"],PARAMS["alpha0"], PARAMS["width"], PARAMS["f_s"], PARAMS["T0"], PARAMS["m_J"], PARAMS["m_A"])
 
@@ -140,7 +151,7 @@ if RUN_SIM:
     PARAMS_ABC = copy.deepcopy(PARAMS) # copies parameters so new values can be generated; FIX ME! this is a redirect, not a copy?
 
     param_save = [] # sets an initial 0; fixed to [] because [[]] made the mean go poorly (averaging in an [] at start?)
-    dists = []
+    data_sim = []
     for i in range(0,NUMBER_SIMS):
         g_B_theta = np.random.beta(2,2)
         g_J_theta = np.random.beta(2,2)
@@ -165,19 +176,15 @@ if RUN_SIM:
         
         #vec1 = sim_total_pop + sim_prop_ad + sim_prop_p_i
         #vec2 = obs_total_pop + obs_prop_ad + obs_prop_p_i
-        a = list(itertools.chain.from_iterable(N_B_sim)) # I had added these in lieu of the summary stats as the 'real'
-        #data that we are trying to replicate mostly closely
-        b = list(itertools.chain.from_iterable(N_J_sim))
-        c = list(itertools.chain.from_iterable(N_A_sim))
-        d = list(itertools.chain.from_iterable(N_B))
-        e = list(itertools.chain.from_iterable(N_J))
-        f = list(itertools.chain.from_iterable(N_A))
-        vec1 = a + b + c
-        vec2 = d + e + f
+
 
         param_save.append([g_J_theta, g_B_theta, alpha0_theta, width_theta, f_s_theta, T0_theta, m_J_theta, m_A_theta])
-        dists.append(euclidean_distance(vec1,vec2))
-
+        data_sim.append([N_B_sim, N_J_sim, N_A_sim]) # stores the simulated date OR summary stats 
+        # trying to pull out the raw summary stats / data so that I can rescale OUTSIDE the loop and then calculate 
+        #distances
+        # functions z_score and euclidean_distance should be useful here!
+        
+    print(data_sim)
     library_index = small_percent(dists,5)
     library = []
     for i in range(0,len(library_index)):
